@@ -73,12 +73,28 @@ Dados **Hpc** y **Spt**.
 - S = ((LBA % (Hpc x Spt)) % Spt) + 1.
 
 # Modos de operación de la arquitectura x86
-- **Real Mode (16 bits)**: Modo original de los procesadores x86. Acceso a 1 MB de memoria. Permite acceso directo al hardware, 
+## Real Mode (16 bits)
+Modo original de los procesadores x86. Acceso a 1 MB de memoria. Permite acceso directo al hardware, 
 pero carece de características modernas de protección de memoria.
-- **Protected Mode (32 bits)**: Introducido con el 80286. Acceso a más memoria y características de protección. Protected Mode, 
-soporta un espacio de direcciones de hasta 4 GB. Incluye características como segmentación y paginación. Además, 
-permite multitarea y protección de memoria.
-- **Long Mode (64 bits)**: Introducido con el x86-64. Soporta dirección de memoria de 64 bits. Tiene compatibilidad con modos 
+### Direccionamiento de memoria en Real Mode
+En este modo, hay poco más de 1 MB de memoria direccionable (incluyendo el **Área de Memoria Alta**), sin embargo, la cantidad utilizable es menor. El acceso a la memoria se realiza mediante **segmentación**, a través del sistema _segmento:offset_.
+
+Hay seis registros de segmento de 16 bits: **CS** (_Code Segment_); **DS** (_Data Segment_); **ES** (_Extra Segment_); **SS** (_Stack Segment_); **FS**; y **GS**. Cuando se usan registros de segmento, las direcciones se indican mediante el _segmento:offset_ que dije hace un momento, siendo **segmento** un valor en un _registro de segmento_, y **offset** un valor en un _registro de dirección_. Los _segmentos_ y _offsets_ se relacionan con las **direcciones físicas** mediante la ecuación **Dirección física** = **Segmento** x 16 + **Offset**.
+### Área de alta memoria
+Si se establece **DS** (u otro _registro de segmento_) en **0xFFFF**, apunta a una dirección **16 bytes** por debajo de **1 MB**. Si se utiliza ese _registro de segmento_ como base, con un **offset** de **0x10** a **0xFFFF**, se puede acceder a direcciones de memoria física de **0x100000** a **0x10FFEF**. Esta área (de casi **64 kB**) por encima de **1 MB** se denomina ***Área de Memoria Alta*** en **Modo Real**. Para que esto funcione, se debe activar la línea de dirección **A20**.
+## Protected Mode (32 bits)
+Introducido con el 80286. Acceso a más memoria y características de protección. **Protected Mode** soporta un espacio de direcciones de hasta **4 GB**. Incluye características como **segmentación** y **paginación**. Además, permite _multitarea_ y _protección de memoria_. El **Protected Mode** permite trabajar con ***direcciones de memoria virtuales***, y cada una con un máximo de **4 GB** de memoria direccionables. Además, restringe el conjunto de instrucciones disponibles mediante **Rings**.
+
+En **Protected Mode** se desbloquea el verdadero potencial de la **CPU**. Sin embargo, en este modo no se pueden usar la mayoría de las **interrupciones BIOS**, porque éstas funcionan en **Real Mode**, a menos que se tenga el ***sub-modo V86*** (**Virtual 8086 Mode**).
+### Entrar al Protected Mode
+Antes de cambiar al **Protected Mode**, se debe hacer lo siguiente:
+- Desactivar las interrupciones, incluyendo las **Non Maskable Interrupts (NMI)** (según el **Intel Developers Manual**).
+- Activar la línea **A20**.
+- Cargar la **GDT** con _descriptores de segmentos_ adecuados para **código**, **datos** y **stack**.
+
+Para saber si la **CPU** está en **Protected Mode** o **Real Mode** se revisa el bit menos significativo del **registro CR0**.
+## Long Mode (64 bits)
+Introducido con el x86-64. Soporta dirección de memoria de 64 bits. Tiene compatibilidad con modos 
 de 32 bits y 16 bits.
 
 # Interrupt Service Routines (ISR)
