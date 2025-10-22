@@ -58,11 +58,13 @@ Siendo:
 - Spt = Número de sectores por pista.
 ### CHS a LBA
 Con índices **C**, **H** base 0, y **S** base 1.
-- **LBA** = (C x Hpc + H) x Spt + (S - 1).  
+- **LBA** = (C x Hpc + H) x Spt + (S - 1).
+
 Para visualizar mejor la fórmula, voy a usar el ejemplo de direccionamiento CHS, y lo transformaré a LBA...
 Si **CHS(4, 3, 2)** = (4 * 16 * 63) + (3 * 63) + 2.
 - Primero, factorizo por el término en común (Hpc). Con esto, queda que **CHS(4, 3, 2)** = 63 * ((4 * 16) + 3) + 2, lo que es igual a **Spt x ((C x Hpc) + H) + S**.
-- Luego, es simplemente restarle la diferencia de base para el **sector** (porque comienza en 1, no en 0). Es decir, ***S - 1***.  
+- Luego, es simplemente restarle la diferencia de base para el **sector** (porque comienza en 1, no en 0). Es decir, ***S - 1***.
+
 Así, queda que **CHS = LBA + 1**. Es decir, **LBA = CHS - 1** (o ***LBA = Spt x ((C x Hpc) + H) + S - 1***).
 ### LBA a CHS
 Dados **Hpc** y **Spt**.
