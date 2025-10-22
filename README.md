@@ -82,6 +82,40 @@ En este modo, hay poco más de 1 MB de memoria direccionable (incluyendo el **Á
 Hay seis registros de segmento de 16 bits: **CS** (_Code Segment_); **DS** (_Data Segment_); **ES** (_Extra Segment_); **SS** (_Stack Segment_); **FS**; y **GS**. Cuando se usan registros de segmento, las direcciones se indican mediante el _segmento:offset_ que dije hace un momento, siendo **segmento** un valor en un _registro de segmento_, y **offset** un valor en un _registro de dirección_. Los _segmentos_ y _offsets_ se relacionan con las **direcciones físicas** mediante la ecuación **Dirección física** = **Segmento** x 16 + **Offset**.
 ### Área de alta memoria
 Si se establece **DS** (u otro _registro de segmento_) en **0xFFFF**, apunta a una dirección **16 bytes** por debajo de **1 MB**. Si se utiliza ese _registro de segmento_ como base, con un **offset** de **0x10** a **0xFFFF**, se puede acceder a direcciones de memoria física de **0x100000** a **0x10FFEF**. Esta área (de casi **64 kB**) por encima de **1 MB** se denomina ***Área de Memoria Alta*** en **Modo Real**. Para que esto funcione, se debe activar la línea de dirección **A20**.
+#### Linea de dirección A20
+La línea de dirección **A20** es la representación física del **bit** en la posición **21** de cualquier acceso a memoria. Su **importancia** radica en el **acceso completo de la memoria**, porque cuando está **desactivado**, no se puede acceder a más allá de **1 MB**.
+
+Normalmente, esta línea viene desactivada para mantener la compatibilidad con sistemas más antiguos, pues, su uso lleva al ***reinicio*** de una dirección de memoria (es decir, pasa de 0xFFFF a 0x0000) al pasar de los **1 MB** disponibles al inicio. Desde el **Intel 80286**, los procesadores tienen más de 20 líneas de dirección en el ***bus***, por lo que se añadió un ***hardware gate*** a la línea **A20** y se dejó desactivada por defecto, simulando el ***reinicio*** de antaño.
+##### Revisar A20
+Para revisar si **A20** está activado o desactivado, se debe **comparar**, en el tiempo de **arranque (boot time)** y durante el **Modo Real**, el ***bootsector identifier*** **0xAA55** ubicado en la dirección **0x0000:0x7DFE**, con el valor **1 MiB** más arriba (dirección **0xFFFF:0x7E0E**). Si la comparación dicta que los valores son distintos, **A20** está activado, y en el caso contrario está **desactivado**. Para entenderlo mejor, la lógica de esta prueba es básicamente aprovechar esa vuelta o reinicio que da la dirección de memoria cuando **A20** está desactivado, es como dar una vuelta en 360° (se llega al mismo lugar). **Importante**, también se debe descartar la posibilidad de que si son iguales, sea simple casualidad, por lo que se lleva a cabo un "swapping" de la **firma mágica** y se vuelve a comparar.
+#### Activar A20
+Hay varias formas de activar **A20**, por ejemplo, a través de las **BIOS functions**; el **Controlador de teclado**; el método **Fast A20**, etc. En este caso, voy a mostrar el método del **INT 15** (BIOS), sacado de [Wiki OSDev - A20 Line](https://wiki.osdev.org/A20_Line#INT_15).
+```assembly
+;FASM
+use16
+mov     ax,2403h                ;--- A20-Gate Support ---
+int     15h
+jb      a20_ns                  ;INT 15h is not supported
+cmp     ah,0
+jnz     a20_ns                  ;INT 15h is not supported
+
+mov     ax,2402h                ;--- A20-Gate Status ---
+int     15h
+jb      a20_failed              ;couldn't get status
+cmp     ah,0
+jnz     a20_failed              ;couldn't get status
+
+cmp     al,1
+jz      a20_activated           ;A20 is already activated
+
+mov     ax,2401h                ;--- A20-Gate Activate ---
+int     15h
+jb      a20_failed              ;couldn't activate the gate
+cmp     ah,0
+jnz     a20_failed              ;couldn't activate the gate
+
+a20_activated:                  ;go on
+```
 ## Protected Mode (32 bits)
 Introducido con el 80286. Acceso a más memoria y características de protección. **Protected Mode** soporta un espacio de direcciones de hasta **4 GB**. Incluye características como **segmentación** y **paginación**. Además, permite _multitarea_ y _protección de memoria_. El **Protected Mode** permite trabajar con ***direcciones de memoria virtuales***, y cada una con un máximo de **4 GB** de memoria direccionables. Además, restringe el conjunto de instrucciones disponibles mediante **Rings**.
 
@@ -92,7 +126,11 @@ Antes de cambiar al **Protected Mode**, se debe hacer lo siguiente:
 - Activar la línea **A20**.
 - Cargar la **GDT** con _descriptores de segmentos_ adecuados para **código**, **datos** y **stack**.
 
-Para saber si la **CPU** está en **Protected Mode** o **Real Mode** se revisa el bit menos significativo del **registro CR0**.
+Luego, se debe colocar el **PE (Protection Enable)** bit del **CR0 (Control Register 0)** en 1 (ON). Para saber si la **CPU** está en **Protected Mode** o **Real Mode** se revisa el bit menos significativo del **CR0**.
+### Virtual 8086 Mode
+El **Virtual 8086 Mode** es un sub-modo del **Protected Mode**. Básicamente, es cuando la **CPU** (en **Protected Mode**) ejecuta una máquina en **Real Mode** de 16 bits ***emulada**.
+#### Entrar al V86 Mode
+
 ## Long Mode (64 bits)
 Introducido con el x86-64. Soporta dirección de memoria de 64 bits. Tiene compatibilidad con modos 
 de 32 bits y 16 bits.
